@@ -1,0 +1,470 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+
+/* ===========================
+   RESET & GLOBAL BASE
+=========================== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  overflow-x: hidden;
+  background: #1C1917;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ===========================
+   THEME TOKENS (matches Welcome & Edit)
+=========================== */
+.result-page {
+  --ink: #1C1917;
+  --ink-soft: #322D28;
+  --paper: #F7F1E3;
+  --paper-dim: #EDE4D0;
+  --amber: #FFB020;
+  --flame: #E8432E;
+  --muted: #B7AB98;
+  --panel: #FFFCF5;
+}
+
+/* ===========================
+   MAIN CONTAINER & BACKGROUND
+=========================== */
+.result-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 30px 20px;
+  background: var(--ink);
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Glowing Background Circles (same language as Welcome/Edit) */
+.result-page::before {
+  content: "";
+  position: fixed;
+  width: 420px;
+  height: 420px;
+  background: var(--flame);
+  border-radius: 50%;
+  filter: blur(150px);
+  top: -140px;
+  left: -140px;
+  opacity: 0.28;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.result-page::after {
+  content: "";
+  position: fixed;
+  width: 380px;
+  height: 380px;
+  background: var(--amber);
+  border-radius: 50%;
+  filter: blur(140px);
+  right: -120px;
+  bottom: -140px;
+  opacity: 0.22;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Film Grain Overlay */
+.result-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  opacity: .04;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Viewfinder Corner Brackets */
+.result-corner {
+  position: fixed;
+  width: clamp(16px, 2.5vw, 26px);
+  height: clamp(16px, 2.5vw, 26px);
+  border: 2px solid var(--flame);
+  opacity: .35;
+  z-index: 2;
+  pointer-events: none;
+}
+.result-corner-tl { top: 16px; left: 16px; border-right: none; border-bottom: none; }
+.result-corner-tr { top: 16px; right: 16px; border-left: none; border-bottom: none; }
+.result-corner-bl { bottom: 16px; left: 16px; border-right: none; border-top: none; }
+.result-corner-br { bottom: 16px; right: 16px; border-left: none; border-top: none; }
+
+/* Film Sprocket Strip */
+.result-sprocket {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 14px;
+  align-items: center;
+  width: 100%;
+  max-width: 550px;
+  position: relative;
+  z-index: 5;
+  opacity: .5;
+  margin-bottom: 18px;
+}
+.result-sprocket .hole {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--paper);
+  opacity: .5;
+  flex-shrink: 0;
+}
+
+/* ===========================
+   RESULT CARD CONTAINER
+=========================== */
+.result-card {
+  background: rgba(247, 241, 227, 0.06);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(247, 241, 227, 0.12);
+  width: 100%;
+  max-width: 550px;
+  border-radius: 28px;
+  padding: 36px 32px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  z-index: 5;
+  transition: all 0.3s ease;
+  animation: resultRise .5s ease;
+}
+
+@keyframes resultRise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===========================
+   HEADER & BADGE
+=========================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Space Mono', monospace;
+  background: rgba(255, 176, 32, 0.14);
+  color: var(--amber);
+  border: 1px solid rgba(255, 176, 32, 0.35);
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 7px 18px;
+  border-radius: 20px;
+  margin-bottom: 4px;
+}
+
+.result-header h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: .03em;
+  color: var(--paper);
+  font-size: 32px;
+  font-weight: 400;
+  margin-bottom: 8px;
+}
+
+.result-header p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 300;
+  max-width: 400px;
+}
+
+/* ===========================
+   PHOTO DISPLAY
+   (sized to match .photo-strip-frame in Edit.css exactly —
+   the exported PNG already carries its own frame + footer,
+   so this shell just presents it, it doesn't re-frame it)
+=========================== */
+.photo-frame-shell {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.preview-hud {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.preview-hud .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6FCF97;
+  display: inline-block;
+  box-shadow: 0 0 0 3px rgba(111, 207, 151, 0.2);
+}
+
+.photo-container {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 25px 55px rgba(0, 0, 0, 0.5);
+  background: transparent;
+  transform: rotate(-1deg);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.photo-tape {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 46px;
+  height: 16px;
+  background: rgba(255, 176, 32, 0.55);
+  border: 1px solid rgba(255, 176, 32, 0.3);
+  z-index: 3;
+}
+
+.photo-container:hover {
+  transform: rotate(0deg) translateY(-4px);
+  box-shadow: 0 30px 65px rgba(0, 0, 0, 0.55);
+}
+
+.photo-preview {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+/* ===========================
+   BUTTON GROUP & ACTIONS
+=========================== */
+.action-label {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #8A7F6E;
+  margin-top: 4px;
+}
+
+.action-label::before,
+.action-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(247, 241, 227, 0.14);
+}
+
+.button-group {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.button-group.single {
+  grid-template-columns: 1fr;
+}
+
+.button-group button {
+  border: none;
+  padding: 13px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+/* Button Variants */
+.download-btn {
+  background: var(--flame);
+  color: var(--paper);
+  box-shadow: 0 10px 24px rgba(232, 67, 46, 0.35);
+}
+
+.download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(232, 67, 46, 0.45);
+  background: #FF5A3E;
+}
+
+.share-btn,
+.retake-btn,
+.home-btn {
+  background: rgba(255,255,255,0.06);
+  color: var(--paper);
+  border: 1px solid rgba(247, 241, 227, 0.18);
+}
+
+.share-btn:hover,
+.retake-btn:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.home-btn:hover {
+  background: rgba(232, 67, 46, 0.14);
+  border-color: var(--flame);
+  color: #FF8A75;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ===========================
+   EMPTY STATE & LOADING
+=========================== */
+.empty-card {
+  background: var(--panel);
+  padding: 44px 32px;
+  border-radius: 24px;
+  text-align: center;
+  max-width: 420px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+  z-index: 5;
+  position: relative;
+}
+
+.empty-card h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: .03em;
+  font-size: 26px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.empty-card p {
+  color: #6B6459;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.primary-btn {
+  background: var(--flame);
+  color: var(--paper);
+  border: none;
+  padding: 12px 26px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: all 0.2s ease;
+  box-shadow: 0 10px 24px rgba(232, 67, 46, 0.35);
+}
+
+.primary-btn:hover {
+  background: #FF5A3E;
+  transform: translateY(-2px);
+}
+
+/* Loading Spinner Canvas */
+.loading-box {
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+  font-size: 12.5px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid rgba(247, 241, 227, 0.15);
+  border-top-color: var(--flame);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===========================
+   RESPONSIVE DESIGN (MOBILE)
+=========================== */
+@media (max-width: 580px) {
+  .result-card {
+    padding: 28px 20px;
+    border-radius: 22px;
+  }
+
+  .result-header h1 {
+    font-size: 26px;
+  }
+
+  .button-group {
+    grid-template-columns: 1fr;
+  }
+
+  .photo-container {
+    max-width: 100%;
+  }
+
+  .result-sprocket { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-card { animation: none; }
+  .spinner { animation: none; }
+}
