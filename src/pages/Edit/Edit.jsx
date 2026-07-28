@@ -48,11 +48,22 @@ const layouts = [
 // Daftar Template Overlay (PNG transparan disimpan di public/templates/)
 const templates = [
   {
-    id: "recap-2024",
-    name: "Blue Yellow Recap",
-    description: "Template Recap 6 Foto (2x3)",
-    overlay: "/templates/recap-template.png",
+    id: "retro-gold",
+    name: "Retro Gold",
+    description: "Template klasik dengan nuansa elegan",
+    overlay: "/templates/retro-gold.png",
     layout: "layout-2x3",
+    frameColor: "cream",
+    pattern: "pattern-dots",
+  },
+  {
+    id: "soft-pink",
+    name: "Soft Pink",
+    description: "Template lembut dan hangat",
+    overlay: "/templates/soft-pink.png",
+    layout: "layout-grid-2x2",
+    frameColor: "rose",
+    pattern: "pattern-checkers",
   },
 ];
 
@@ -112,7 +123,6 @@ export default function Edit({ photos = [], back, onRestart, initialTemplate }) 
       return;
     }
     setSelectedTemplate(template);
-    if (template.layout) setLayoutMode(template.layout);
     if (template.frameColor) setFrameColorId(template.frameColor);
     if (template.pattern) setPatternId(template.pattern);
     if (template.filter) setFilter(template.filter);
@@ -159,11 +169,35 @@ export default function Edit({ photos = [], back, onRestart, initialTemplate }) 
     setIsDownloading(true);
 
     try {
-      const canvas = await html2canvas(frameRef.current, {
-        backgroundColor: null,
+      const frame = frameRef.current;
+      const templateOverlay = frame.querySelector('img[alt="Template Overlay"]');
+      if (templateOverlay) {
+        templateOverlay.remove();
+      }
+
+      const images = Array.from(frame.querySelectorAll("img"));
+      await Promise.all(
+        images.map((img) => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+        })
+      );
+
+      await new Promise((resolve) => {
+        requestAnimationFrame(() => setTimeout(resolve, 120));
+      });
+
+      const canvas = await html2canvas(frame, {
+        backgroundColor: "#ffffff",
         scale: 3,
         useCORS: true,
         allowTaint: true,
+        logging: false,
+        width: frame.scrollWidth,
+        height: frame.scrollHeight,
       });
 
       const link = document.createElement("a");
@@ -184,13 +218,7 @@ export default function Edit({ photos = [], back, onRestart, initialTemplate }) 
   // Aturan Grid & Padding
   const { gridStyle, canvasPadding } = useMemo(() => {
     let style = {};
-    let padding = "24px";
-
-    if (selectedTemplate?.overlay) {
-      if (layoutMode === "layout-2x3") {
-        padding = "14% 6% 4% 6%";
-      }
-    }
+    const padding = "24px";
 
     switch (layoutMode) {
       case "layout-grid-2x2":
@@ -249,18 +277,21 @@ export default function Edit({ photos = [], back, onRestart, initialTemplate }) 
         <section className="preview-area">
           <div
             ref={frameRef}
-            className={`photo-frame-canvas ${!selectedTemplate ? patternId : ""}`}
+            className={`photo-frame-canvas ${patternId}`}
             style={{
               position: "relative",
-              backgroundColor: selectedTemplate ? "transparent" : activeFrameColor.bg,
+              backgroundColor: activeFrameColor.bg,
               color: activeFrameColor.id === "charcoal" || activeFrameColor.id === "choco" ? "#F7F1E3" : "#1C1917",
-              padding: selectedTemplate ? canvasPadding : "24px",
+              padding: canvasPadding,
               width: "100%",
               maxWidth: "440px",
-              ...(selectedTemplate ? { aspectRatio: "2 / 3" } : { height: "auto" }),
+              height: "auto",
               borderRadius: "24px",
               boxSizing: "border-box",
               overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-start",
             }}
           >
             {/* LAYER 1: GRID FOTO */}
@@ -268,7 +299,7 @@ export default function Edit({ photos = [], back, onRestart, initialTemplate }) 
               className={`grid-layout ${layoutMode}`}
               style={{
                 display: "grid",
-                gap: selectedTemplate ? "12px" : `${gridGap}px`,
+                gap: `${gridGap}px`,
                 width: "100%",
                 boxSizing: "border-box",
                 zIndex: 1,
@@ -280,7 +311,7 @@ export default function Edit({ photos = [], back, onRestart, initialTemplate }) 
                   key={`${src}-${idx}`}
                   className="photo-item"
                   style={{
-                    borderRadius: selectedTemplate ? "12px" : `${borderRadius}px`,
+                    borderRadius: `${borderRadius}px`,
                     aspectRatio: photoAspectRatios[src] || "4 / 3",
                     width: "100%",
                     overflow: "hidden",
@@ -308,7 +339,7 @@ export default function Edit({ photos = [], back, onRestart, initialTemplate }) 
                   key={`placeholder-${idx}`}
                   className="photo-item empty-slot"
                   style={{
-                    borderRadius: selectedTemplate ? "12px" : `${borderRadius}px`,
+                    borderRadius: `${borderRadius}px`,
                     aspectRatio: "4 / 3",
                     display: "flex",
                     alignItems: "center",
@@ -325,42 +356,25 @@ export default function Edit({ photos = [], back, onRestart, initialTemplate }) 
               ))}
             </div>
 
-            {/* LAYER 2: OVERLAY TEMPLATE PNG */}
-            {selectedTemplate && selectedTemplate.overlay && (
-              <img
-                src={selectedTemplate.overlay}
-                alt="Template Overlay"
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "fill",
-                  pointerEvents: "none",
-                  zIndex: 2,
-                }}
-              />
-            )}
-
             {/* WATERMARK TEKS */}
-            {!selectedTemplate && (
-              <div
-                className="frame-watermark"
-                style={{
-                  position: "relative",
-                  zIndex: 3,
-                  marginTop: "16px",
-                  textAlign: "center",
-                }}
-              >
-                <h3 className="wm-title" style={{ margin: 0, fontSize: "1.4rem", fontWeight: "bold" }}>
-                  {customTitle || "PHOTO BOOTH"}
-                </h3>
-                <p className="wm-subtitle" style={{ margin: "4px 0 0 0", fontSize: "0.85rem", letterSpacing: "2px" }}>
-                  {customSubtitle || "MEMORI KITA"}
-                </p>
-              </div>
-            )}
+            <div
+              className="frame-watermark"
+              style={{
+                position: "relative",
+                zIndex: 3,
+                marginTop: "16px",
+                textAlign: "center",
+                width: "100%",
+                color: activeFrameColor.id === "charcoal" || activeFrameColor.id === "choco" ? "#F7F1E3" : "#1C1917",
+              }}
+            >
+              <h3 className="wm-title" style={{ margin: 0, fontSize: "1.4rem", fontWeight: "bold" }}>
+                {customTitle || "PHOTO BOOTH"}
+              </h3>
+              <p className="wm-subtitle" style={{ margin: "4px 0 0 0", fontSize: "0.85rem", letterSpacing: "2px" }}>
+                {customSubtitle || "MEMORI KITA"}
+              </p>
+            </div>
           </div>
         </section>
 
@@ -373,20 +387,18 @@ export default function Edit({ photos = [], back, onRestart, initialTemplate }) 
           />
           <UploadControl handleImageUpload={handleImageUpload} />
           <LayoutControl layouts={layouts} layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
-          {!selectedTemplate && (
-            <FrameStyleControl
-              frameColors={frameColors}
-              frameColorId={frameColorId}
-              setFrameColorId={setFrameColorId}
-              framePatterns={framePatterns}
-              patternId={patternId}
-              setPatternId={setPatternId}
-              gridGap={gridGap}
-              setGridGap={setGridGap}
-              borderRadius={borderRadius}
-              setBorderRadius={setBorderRadius}
-            />
-          )}
+          <FrameStyleControl
+            frameColors={frameColors}
+            frameColorId={frameColorId}
+            setFrameColorId={setFrameColorId}
+            framePatterns={framePatterns}
+            patternId={patternId}
+            setPatternId={setPatternId}
+            gridGap={gridGap}
+            setGridGap={setGridGap}
+            borderRadius={borderRadius}
+            setBorderRadius={setBorderRadius}
+          />
           <FilterControl
             filters={filters}
             filter={filter}
