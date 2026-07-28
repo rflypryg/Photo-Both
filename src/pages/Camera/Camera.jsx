@@ -17,20 +17,37 @@ function SprocketStrip() {
   );
 }
 
-function Camera({ onCaptureComplete, setPhoto, next, back }) {
+const slotCountByLayout = {
+  "layout-strip-2": 2,
+  "layout-strip-3": 3,
+  "layout-strip-4": 4,
+  "layout-grid-2x2": 4,
+  "layout-grid-3x3": 9,
+  "layout-polaroid": 1,
+  "layout-hero-2": 3,
+  "layout-3x2": 6,
+  "layout-2x3": 6,
+  "layout-stack": 4,
+};
+
+function Camera({ onCaptureComplete, setPhotos: setPhotosParent, setPhoto, next, back, selectedTemplate }) {
   const webcamRef = useRef(null);
   const handLandmarkerRef = useRef(null);
   const lastVideoTime = useRef(-1);
   const animationFrameRef = useRef(null);
   const isCapturing = useRef(false);
 
-  // Dynamic max photos state (Default 4, opsi: 4, 6, 8, 9)
-  const [maxPhotos, setMaxPhotos] = useState(4);
+  const selectedLayout = selectedTemplate?.layout || "layout-grid-2x2";
+  const maxPhotos = slotCountByLayout[selectedLayout] || 4;
 
   const [isBlurring, setIsBlurring] = useState(false);
   const [flash, setFlash] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [isCooldown, setIsCooldown] = useState(false);
+
+  useEffect(() => {
+    setPhotos((prev) => prev.slice(0, maxPhotos));
+  }, [maxPhotos]);
 
   useEffect(() => {
     let mounted = true;
@@ -72,7 +89,6 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
   }, []);
 
   const detectHands = () => {
-    // Mencegah deteksi berulang jika sedang mengambil foto, cooldown, atau foto sudah penuh
     if (
       !webcamRef.current ||
       !handLandmarkerRef.current ||
@@ -114,14 +130,11 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
   const captureSingle = async () => {
     if (isBlurring || isCapturing.current || isCooldown || photos.length >= maxPhotos) return;
 
-    // Kunci flag agar tidak kepicu berulang kali dari loop requestAnimationFrame
     isCapturing.current = true;
 
-    // 1. Efek Blur berjalan selama 1 detik (1000ms)
     setIsBlurring(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // 2. Hilangkan blur lalu jalankan Flash & Ambil Gambar
     setIsBlurring(false);
     setFlash(true);
 
@@ -135,7 +148,6 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
     await new Promise((resolve) => setTimeout(resolve, 200));
     setFlash(false);
 
-    // 3. Beri jeda cooldown (1 detik) sebelum gestur berikutnya bisa terdeteksi lagi
     setIsCooldown(true);
     setTimeout(() => {
       isCapturing.current = false;
@@ -147,31 +159,28 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
     setPhotos((prev) => prev.slice(0, -1));
   };
 
-  const handleMaxPhotosChange = (e) => {
-    const newMax = parseInt(e.target.value, 10);
-    setMaxPhotos(newMax);
-    if (photos.length > newMax) {
-      setPhotos((prev) => prev.slice(0, newMax));
-    }
-  };
-
+  // FIX: Mengirimkan array foto ke semua kemungkinan prop handler
   const handleConfirm = () => {
+    if (typeof setPhotosParent === "function") {
+      setPhotosParent(photos);
+    }
+    if (typeof setPhoto === "function") {
+      setPhoto(photos);
+    }
     if (typeof onCaptureComplete === "function") {
       onCaptureComplete(photos);
-    } else {
-      if (typeof setPhoto === "function") setPhoto(photos);
-      if (typeof next === "function") next();
+    }
+    if (typeof next === "function") {
+      next();
     }
   };
 
   return (
     <div className="camera-page">
-      {/* Background Visual Effects */}
       <div className="cam-glow cam-glow1"></div>
       <div className="cam-glow cam-glow2"></div>
       <div className="cam-grain" aria-hidden="true"></div>
 
-      {/* Frame Corners */}
       <span className="cam-corner cam-corner-tl" aria-hidden="true"></span>
       <span className="cam-corner cam-corner-tr" aria-hidden="true"></span>
       <span className="cam-corner cam-corner-bl" aria-hidden="true"></span>
@@ -180,7 +189,6 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
       <SprocketStrip />
 
       <div className="camera-content">
-        {/* Header */}
         <header className="camera-header">
           <button className="back-btn" onClick={back}>
             ← KEMBALI
@@ -189,25 +197,19 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
             PHOTO <span>BOOTH</span>
           </h2>
           
-          {/* Selector Pilihan Jumlah Take */}
           <div className="take-selector-container">
             <label htmlFor="take-select">TAKE:</label>
             <select
               id="take-select"
               className="take-select"
               value={maxPhotos}
-              onChange={handleMaxPhotosChange}
               disabled={photos.length > 0 || isCapturing.current}
             >
-              <option value={4}>4 Foto</option>
-              <option value={6}>6 Foto</option>
-              <option value={8}>8 Foto</option>
-              <option value={9}>9 Foto</option>
+              <option value={maxPhotos}>{maxPhotos} Foto</option>
             </select>
           </div>
         </header>
 
-        {/* Display Webcam Viewfinder */}
         <div className="webcam-container">
           {flash && <div className="flash"></div>}
 
@@ -222,7 +224,6 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
             }}
           />
 
-          {/* Viewfinder Overlays */}
           <div className="viewfinder-corners">
             <span className="corner top-left"></span>
             <span className="corner top-right"></span>
@@ -237,7 +238,6 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
             <div className="grid-line vertical-2"></div>
           </div>
 
-          {/* Status HUD Overlay */}
           <div className="camera-info-bar">
             <div className="take-badge-inline">
               {photos.length < maxPhotos
@@ -261,7 +261,6 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
           </div>
         </div>
 
-        {/* Slot Grid Preview Foto */}
         <div className="camera-preview-slots">
           {Array.from({ length: maxPhotos }).map((_, index) => (
             <div
@@ -280,7 +279,6 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
           ))}
         </div>
 
-        {/* Panel Kontrol Shutter & Retake */}
         <div className="camera-controls">
           {photos.length > 0 && (
             <button

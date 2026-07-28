@@ -2,9 +2,6 @@
 
 /* ==========================================
    WELCOME PAGE STYLES (Welcome.css)
-   Palette matches Edit.css / Result.css so the
-   whole flow (Welcome → Edit → Result) reads
-   as one photobooth identity.
 ========================================== */
 
 /* 0. Theme Tokens */
@@ -19,7 +16,7 @@
   --panel: #FFFCF5;
 }
 
-/* 1. Root & Container Base */
+/* 1. Root & Container Base (100% Full Width) */
 .pbw-root {
   position: relative;
   min-height: 100vh;
@@ -31,8 +28,8 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
-  overflow: hidden;
+  padding: 0; /* Menghapus padding luar agar ornamen menempel ke pinggir layar */
+  overflow-x: hidden;
   box-sizing: border-box;
 }
 
@@ -73,30 +70,31 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* 3. Corner Viewfinder Elements */
+/* 3. Corner Viewfinder Elements (Menempel ke Ujung Layar) */
 .pbw-corner {
   position: absolute;
   width: clamp(16px, 2.5vw, 24px);
   height: clamp(16px, 2.5vw, 24px);
   border: 2px solid var(--flame);
   opacity: .4;
-  z-index: 1;
+  z-index: 10;
   pointer-events: none;
 }
-.pbw-corner-tl { top: 20px; left: 20px; border-right: none; border-bottom: none; }
-.pbw-corner-tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
-.pbw-corner-bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
-.pbw-corner-br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+.pbw-corner-tl { top: 20px; left: 24px; border-right: none; border-bottom: none; }
+.pbw-corner-tr { top: 20px; right: 24px; border-left: none; border-bottom: none; }
+.pbw-corner-bl { bottom: 20px; left: 24px; border-right: none; border-top: none; }
+.pbw-corner-br { bottom: 20px; right: 24px; border-left: none; border-top: none; }
 
-/* 4. Film Sprocket Strips */
+/* 4. Film Sprocket Strips (Rentang Penuh 100% Layar) */
 .pbw-strip {
   display: flex;
   justify-content: space-between;
   width: 100%;
-  max-width: 900px;
-  padding: 8px 0;
+  max-width: 100%; /* Menghapus max-width 900px */
+  padding: 12px 32px;
   z-index: 1;
   opacity: .6;
+  box-sizing: border-box;
 }
 
 .pbw-hole {
@@ -107,15 +105,17 @@
   border-radius: 3px;
 }
 
-/* 5. Header Section (Pojok Kiri Logo & Pojok Kanan Badge) */
+/* 5. Header Section (Selebar Area Konten Utama) */
 .pbw-header-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  max-width: 900px;
+  max-width: 1100px; /* Melebarkan batas header */
+  padding: 0 32px;
   z-index: 2;
   margin-top: 10px;
+  box-sizing: border-box;
 }
 
 .pbw-logo {
@@ -170,12 +170,15 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 650px;
+  width: 100%;
+  max-width: 800px; /* Diperlebar sedikit agar card dan judul proposional */
+  padding: 0 24px;
   z-index: 2;
-  margin: 20px 0;
+  margin: 20px auto;
   opacity: 0;
   transform: translateY(15px);
   transition: opacity 0.6s ease, transform 0.6s ease;
+  box-sizing: border-box;
 }
 
 .pbw-content.pbw-armed {
@@ -223,7 +226,7 @@
 /* Typography */
 .pbw-title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(38px, 6vw, 56px);
+  font-size: clamp(38px, 6vw, 64px);
   letter-spacing: .015em;
   line-height: 1.05;
   margin-bottom: 16px;
@@ -241,7 +244,64 @@
   font-weight: 300;
   line-height: 1.65;
   margin-bottom: 30px;
-  max-width: 480px;
+  max-width: 520px;
+}
+
+/* Template Picker */
+.pbw-template-picker {
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+.pbw-template-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 12px;
+}
+
+.pbw-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.pbw-template-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(247, 241, 227, 0.12);
+  color: var(--paper);
+  border-radius: 12px;
+  padding: 12px 10px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.pbw-template-card:hover {
+  border-color: rgba(255, 176, 32, 0.35);
+  background: rgba(255, 176, 32, 0.12);
+}
+
+.pbw-template-card.active {
+  border-color: var(--flame);
+  background: rgba(232, 67, 46, 0.16);
+}
+
+.pbw-template-name {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.pbw-template-desc {
+  font-size: 0.72rem;
+  color: var(--muted);
 }
 
 /* Start Button */
@@ -350,6 +410,12 @@
 
 /* 8. Responsif Mobile */
 @media (max-width: 640px) {
+  .pbw-header-row,
+  .pbw-strip {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
   .pbw-title {
     font-size: 32px;
   }

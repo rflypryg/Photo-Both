@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-// Ubah baris ke-2 di Welcome.jsx
 import logoCamera from "../../assets/camera.png";
 import './Welcome.css';
 
@@ -61,10 +60,10 @@ function Welcome({ onStart }) {
         </h1>
 
         <p className="pbw-desc">
-          Abadikan senyuman dan kenangan manismu. Pilih frame favorit, bergaya di depan kamera, dan cetak hasilnya secara instan.
+          Abadikan senyuman dan kenangan manismu. Siapkan pose, lalu mulai sesi photo dengan hasil yang langsung siap dipakai.
         </p>
 
-        <button className="pbw-start" onClick={onStart}>
+        <button className="pbw-start" onClick={() => onStart()}>
           <span className="pbw-shutter" />
           Mulai Sesi Photo
         </button>

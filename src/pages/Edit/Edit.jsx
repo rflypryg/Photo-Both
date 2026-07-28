@@ -1,537 +1,413 @@
-  import React, { useState, useRef } from "react";
-  import "./Edit.css";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import html2canvas from "html2canvas";
+import "./Edit.css";
 
-  const LAYOUTS = [
-    { id: "strip-4", label: "Classic Strip", slots: 4 },
-    { id: "grid-2x2", label: "2 x 2 Grid", slots: 4 },
-    { id: "focus-1", label: "Hero Grid", slots: 4 },
-    { id: "collage", label: "Mosaic Collage", slots: 5 },
-    { id: "duo-split", label: "Mirror Split", slots: 2 },
-    { id: "contact-sheet", label: "Contact Sheet", slots: 6 },
-    { id: "film-strip", label: "Retro Film", slots: 4 },
-    { id: "grid-3x3", label: "3 x 3 Grid", slots: 9 },
-  ];
+import FilterControl from "./components/FilterControl";
+import FrameStyleControl from "./components/FrameStyleControl";
+import LayoutControl from "./components/LayoutControl";
+import TextControl from "./components/TextControl";
+import UploadControl from "./components/UploadControl";
+import TemplateControl from "./components/TemplateControl";
 
-  const FRAME_COLORS = [
-    { id: "frame-white", bg: "#FFFFFF", text: "#18181B", name: "Classic White" },
-    { id: "frame-dark", bg: "#18181B", text: "#FAFAFA", name: "Noir Black" },
-    { id: "frame-amber", bg: "#FFF3DC", text: "#78350F", name: "Warm Amber" },
-    { id: "frame-flame", bg: "#FDE3DC", text: "#991B1B", name: "Flame Rose" },
-    { id: "frame-sage", bg: "#DCFCE7", text: "#14532D", name: "Sage Green" },
-    { id: "frame-blush", bg: "#FCE7F3", text: "#831843", name: "Blush Pink" },
-    { id: "frame-sky", bg: "#DBEAFE", text: "#1E40AF", name: "Sky Blue" },
-    { id: "frame-kraft", bg: "#EFE0C8", text: "#451A03", name: "Kraft Paper" },
-  ];
+const frameColors = [
+  { id: "cream", name: "Cream", bg: "#F7E7B0" },
+  { id: "rose", name: "Rose", bg: "#F6C2D1" },
+  { id: "mint", name: "Mint", bg: "#D6F3E5" },
+  { id: "sky", name: "Sky", bg: "#CFE8FF" },
+  { id: "choco", name: "Choco", bg: "#4B2E2B" },
+  { id: "charcoal", name: "Charcoal", bg: "#2F2A2A" },
+];
 
-  const FRAME_PATTERNS = [
-    { id: "none", label: "Solid" },
-    { id: "dots", label: "Polka Dots" },
-    { id: "stripes", label: "Stripes" },
-    { id: "checker", label: "Checker" },
-  ];
+const framePatterns = [
+  { id: "pattern-dots", label: "Dots" },
+  { id: "pattern-stripes", label: "Stripes" },
+  { id: "pattern-grid", label: "Grid" },
+  { id: "pattern-gingham", label: "Gingham" },
+  { id: "pattern-stars", label: "Stars" },
+  { id: "pattern-checkers", label: "Checkers" },
+];
 
-  const FILTERS = [
-    { id: "none", label: "Original" },
-    { id: "bw", label: "B & W Mono" },
-    { id: "vintage", label: "Sepia Vintage" },
-    { id: "cool", label: "Cool Ice" },
-    { id: "warm", label: "Golden Warm" },
-    { id: "cyber", label: "Cyber Neon" },
-  ];
+const filters = [
+  { id: "none", label: "Normal" },
+  { id: "warm", label: "Warm" },
+  { id: "cool", label: "Cool" },
+  { id: "mono", label: "Mono" },
+  { id: "sepia", label: "Sepia" },
+  { id: "vintage", label: "Vintage" },
+];
 
-  const loadHtml2Canvas = () => {
-    return new Promise((resolve, reject) => {
-      if (window.html2canvas) {
-        resolve(window.html2canvas);
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-      script.onload = () => resolve(window.html2canvas);
-      script.onerror = () => reject(new Error("Failed to load html2canvas library"));
-      document.body.appendChild(script);
+const layouts = [
+  { id: "layout-grid-2x2", label: "2x2 Classic", count: 4 },
+  { id: "layout-strip-3", label: "Strip 3", count: 3 },
+  { id: "layout-strip-4", label: "Strip 4", count: 4 },
+  { id: "layout-2x3", label: "Recap 2x3", count: 6 },
+  { id: "layout-3x2", label: "3x2", count: 6 },
+  { id: "layout-stack", label: "Stack", count: 4 },
+];
+
+// Daftar Template Overlay (PNG transparan disimpan di public/templates/)
+const templates = [
+  {
+    id: "recap-2024",
+    name: "Blue Yellow Recap",
+    description: "Template Recap 6 Foto (2x3)",
+    overlay: "/templates/recap-template.png",
+    layout: "layout-2x3",
+  },
+];
+
+function getFilterValue(filterId) {
+  switch (filterId) {
+    case "warm":
+      return "brightness(1.05) saturate(1.15) sepia(0.1)";
+    case "cool":
+      return "brightness(1.02) saturate(0.95) hue-rotate(-10deg)";
+    case "mono":
+      return "grayscale(1) contrast(1.05)";
+    case "sepia":
+      return "sepia(0.8) saturate(0.85) contrast(1.05)";
+    case "vintage":
+      return "sepia(0.65) saturate(0.8) brightness(1.02) contrast(1.08)";
+    default:
+      return "none";
+  }
+}
+
+export default function Edit({ photos = [], back, onRestart, initialTemplate }) {
+  const frameRef = useRef(null);
+  const [photoItems, setPhotoItems] = useState([]);
+  const [layoutMode, setLayoutMode] = useState("layout-grid-2x2");
+  const [selectedTemplate, setSelectedTemplate] = useState(initialTemplate || null);
+  const [frameColorId, setFrameColorId] = useState("cream");
+  const [patternId, setPatternId] = useState("pattern-dots");
+  const [gridGap, setGridGap] = useState(10);
+  const [borderRadius, setBorderRadius] = useState(8);
+  const [filter, setFilter] = useState("none");
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [saturate, setSaturate] = useState(100);
+  const [customTitle, setCustomTitle] = useState("PHOTO BOOTH");
+  const [customSubtitle, setCustomSubtitle] = useState("MEMORI KITA");
+  const [photoAspectRatios, setPhotoAspectRatios] = useState({});
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    setPhotoItems(Array.isArray(photos) ? photos : []);
+  }, [photos]);
+
+  useEffect(() => {
+    if (initialTemplate) {
+      applyTemplate(initialTemplate);
+    }
+  }, [initialTemplate]);
+
+  const activeFrameColor = useMemo(
+    () => frameColors.find((color) => color.id === frameColorId) || frameColors[0],
+    [frameColorId]
+  );
+
+  function applyTemplate(template) {
+    if (!template) {
+      setSelectedTemplate(null);
+      return;
+    }
+    setSelectedTemplate(template);
+    if (template.layout) setLayoutMode(template.layout);
+    if (template.frameColor) setFrameColorId(template.frameColor);
+    if (template.pattern) setPatternId(template.pattern);
+    if (template.filter) setFilter(template.filter);
+    if (template.brightness) setBrightness(template.brightness);
+    if (template.contrast) setContrast(template.contrast);
+    if (template.saturate) setSaturate(template.saturate);
+    if (template.title) setCustomTitle(template.title);
+    if (template.subtitle) setCustomSubtitle(template.subtitle);
+  }
+
+  // Deteksi rasio asli gambar secara otomatis
+  const handlePhotoLoad = (event, src) => {
+    const { naturalWidth, naturalHeight } = event.currentTarget;
+    const ratio = naturalWidth && naturalHeight ? naturalWidth / naturalHeight : 4 / 3;
+
+    setPhotoAspectRatios((prev) => {
+      if (prev[src] === ratio) return prev;
+      return { ...prev, [src]: ratio };
     });
   };
 
-  function LayoutIcon({ id }) {
-    switch (id) {
-      case "strip-4":
-        return (
-          <div className="icon-preview icon-strip-4">
-            <div /><div /><div /><div />
-          </div>
-        );
-      case "grid-2x2":
-        return (
-          <div className="icon-preview icon-grid-2x2">
-            <div /><div /><div /><div />
-          </div>
-        );
-      case "focus-1":
-        return (
-          <div className="icon-preview icon-focus-1">
-            <div className="big" />
-            <div className="small-group">
-              <div /><div /><div />
-            </div>
-          </div>
-        );
-      case "collage":
-        return (
-          <div className="icon-preview icon-collage">
-            <div className="big-block" />
-            <div /><div /><div /><div />
-          </div>
-        );
-      case "duo-split":
-        return (
-          <div className="icon-preview icon-duo-split">
-            <div /><div />
-          </div>
-        );
-      case "contact-sheet":
-        return (
-          <div className="icon-preview icon-contact-sheet">
-            <div /><div /><div /><div /><div /><div />
-          </div>
-        );
-      case "film-strip":
-        return (
-          <div className="icon-preview icon-film-strip">
-            <div /><div /><div /><div />
-          </div>
-        );
-      case "grid-3x3":
-        return (
-          <div className="icon-preview icon-grid-3x3">
-            <div /><div /><div /><div /><div /><div /><div /><div /><div />
-          </div>
-        );
-      default:
-        return null;
-    }
-  }
+  const handleImageUpload = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
 
-  export default function Edit({ photo, back, next }) {
-    const initialPhotos = Array.isArray(photo) ? photo : photo ? [photo] : [];
-    const [photosList, setPhotosList] = useState(initialPhotos);
+    const readers = files.map(
+      (file) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        })
+    );
 
-    // Filter & Adjustments State
-    const [brightness, setBrightness] = useState(100);
-    const [contrast, setContrast] = useState(100);
-    const [saturate, setSaturate] = useState(100);
-    const [filter, setFilter] = useState("none");
+    Promise.all(readers).then((results) => {
+      setPhotoItems((prev) => [...prev, ...results]);
+      event.target.value = "";
+    });
+  };
 
-    // Grid, Spacing & Frame Customization State
-    const [layoutMode, setLayoutMode] = useState("strip-4");
-    const [frameColorId, setFrameColorId] = useState("frame-white");
-    const [patternId, setPatternId] = useState("none");
-    const [gridGap, setGridGap] = useState(10);
-    const [borderRadius, setBorderRadius] = useState(8);
+  const handleDownload = async () => {
+    if (!frameRef.current) return;
+    setIsDownloading(true);
 
-    // Watermark Custom Text
-    const [customTitle, setCustomTitle] = useState("PHOTO BOOTH");
-    const [customSubtitle, setCustomSubtitle] = useState("• 2026 MEMORIES •");
-
-    // Interactive Photo Swap State
-    const [swapSourceIndex, setSwapSourceIndex] = useState(null);
-    const [isExporting, setIsExporting] = useState(false);
-
-    const previewRef = useRef(null);
-    const activeFrameColor = FRAME_COLORS.find((c) => c.id === frameColorId) || FRAME_COLORS[0];
-
-    const getFilterStyle = () => {
-      let filterString = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%)`;
-
-      switch (filter) {
-        case "bw":
-          filterString += " grayscale(100%)";
-          break;
-        case "vintage":
-          filterString += " sepia(60%) hue-rotate(-10deg)";
-          break;
-        case "cool":
-          filterString += " hue-rotate(180deg) saturate(120%)";
-          break;
-        case "warm":
-          filterString += " sepia(30%) saturate(140%)";
-          break;
-        case "cyber":
-          filterString += " hue-rotate(290deg) contrast(130%) saturate(180%)";
-          break;
-        default:
-          break;
-      }
-
-      return filterString;
-    };
-
-    const handlePhotoClick = (index) => {
-      if (swapSourceIndex === null) {
-        setSwapSourceIndex(index);
-      } else if (swapSourceIndex === index) {
-        setSwapSourceIndex(null);
-      } else {
-        const updated = [...photosList];
-        const temp = updated[swapSourceIndex];
-        updated[swapSourceIndex] = updated[index];
-        updated[index] = temp;
-        setPhotosList(updated);
-        setSwapSourceIndex(null);
-      }
-    };
-
-    const handleReset = () => {
-      setBrightness(100);
-      setContrast(100);
-      setSaturate(100);
-      setFilter("none");
-      setLayoutMode("strip-4");
-      setFrameColorId("frame-white");
-      setPatternId("none");
-      setGridGap(10);
-      setBorderRadius(8);
-      setCustomTitle("PHOTO BOOTH");
-      setCustomSubtitle("• 2026 MEMORIES •");
-      setSwapSourceIndex(null);
-    };
-
-    const handleImageUpload = (e) => {
-      const files = Array.from(e.target.files);
-      if (files.length === 0) return;
-
-      const newImageUrls = files.map((file) => URL.createObjectURL(file));
-      setPhotosList((prev) => [...newImageUrls, ...prev]);
-    };
-
-    const handleFinishEdit = async () => {
-      if (!previewRef.current) return;
-
-      setIsExporting(true);
-
-      try {
-        const h2c = await loadHtml2Canvas();
-        const canvas = await h2c(previewRef.current, {
-          scale: 3,
-          useCORS: true,
-          backgroundColor: null,
-          logging: false,
-          windowWidth: 1480,
+    try {
+      const canvas = await html2canvas(frameRef.current, {
+        backgroundColor: null,
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
       });
 
-        const finalImageDataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = `photo-booth-${Date.now()}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } catch (error) {
+      console.error("Gagal mengunduh hasil edit:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
-        if (typeof next === "function") {
-          next({
-            photo: finalImageDataUrl,
-            photos: photosList,
-            layoutMode,
-            frameColor: activeFrameColor,
-            filterSettings: { brightness, contrast, saturate, filter },
-          });
-        }
-      } catch (err) {
-        console.error("Gagal merender gambar:", err);
-        if (typeof next === "function") next(photosList[0]);
-      } finally {
-        setIsExporting(false);
+  const currentLayoutObj = layouts.find((item) => item.id === layoutMode);
+  const maxPhotos = currentLayoutObj ? currentLayoutObj.count : 4;
+  const visiblePhotos = photoItems.slice(0, maxPhotos);
+
+  // Aturan Grid & Padding
+  const { gridStyle, canvasPadding } = useMemo(() => {
+    let style = {};
+    let padding = "24px";
+
+    if (selectedTemplate?.overlay) {
+      if (layoutMode === "layout-2x3") {
+        padding = "14% 6% 4% 6%";
       }
-    };
-
-    const activeLayoutObj = LAYOUTS.find((l) => l.id === layoutMode) || LAYOUTS[0];
-    const requiredSlots = activeLayoutObj.slots;
-
-    const currentPhotos = [...photosList];
-    while (currentPhotos.length < requiredSlots) {
-      currentPhotos.push("https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&auto=format&fit=crop&q=80");
     }
 
-    if (photosList.length === 0) {
-      return (
-        <div className="edit-page">
-          <div className="no-photo-card">
-            <h2>📷 Tidak Ada Foto</h2>
-            <p>Belum ada foto yang diambil dari kamera.</p>
-            <button className="back-btn" onClick={back}>
-              ← Kembali ke Kamera
-            </button>
-          </div>
+    switch (layoutMode) {
+      case "layout-grid-2x2":
+        style = {
+          gridTemplateColumns: "repeat(2, 1fr)",
+        };
+        break;
+      case "layout-strip-3":
+        style = {
+          gridTemplateColumns: "1fr",
+        };
+        break;
+      case "layout-strip-4":
+        style = {
+          gridTemplateColumns: "1fr",
+        };
+        break;
+      case "layout-2x3":
+        style = {
+          gridTemplateColumns: "repeat(2, 1fr)",
+        };
+        break;
+      case "layout-3x2":
+        style = {
+          gridTemplateColumns: "repeat(3, 1fr)",
+        };
+        break;
+      default:
+        style = {
+          gridTemplateColumns: "repeat(2, 1fr)",
+        };
+    }
+
+    return { gridStyle: style, canvasPadding: padding };
+  }, [layoutMode, selectedTemplate]);
+
+  return (
+    <div className="edit-container">
+      <header className="edit-header">
+        <button className="back-btn" onClick={back}>
+          ← KEMBALI
+        </button>
+        <h2>PHOTO BOOTH EDIT</h2>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button className="upload-btn" onClick={onRestart}>
+            FOTO ULANG
+          </button>
+          <button className="next-btn" onClick={handleDownload} disabled={isDownloading}>
+            {isDownloading ? "MENGUNDUH..." : "DOWNLOAD PNG"}
+          </button>
         </div>
-      );
-    }
+      </header>
 
-    return (
-      <div className="edit-page">
-        {/* Decorative film elements */}
-        <div className="edit-grain" />
-        <div className="edit-corner edit-corner-tl" />
-        <div className="edit-corner edit-corner-tr" />
-        <div className="edit-corner edit-corner-bl" />
-        <div className="edit-corner edit-corner-br" />
-
-        {/* Header Navigation */}
-        <header className="edit-header">
-          <button className="back-btn" onClick={back} disabled={isExporting}>
-            ← Kembali
-          </button>
-          <h2>
-            🎞️ <span>PHOTO BOOTH EDITOR</span>
-          </h2>
-          <button
-            className="confirm-btn"
-            onClick={handleFinishEdit}
-            disabled={isExporting}
+      <main className="edit-workspace">
+        {/* PREVIEW CANVAS */}
+        <section className="preview-area">
+          <div
+            ref={frameRef}
+            className={`photo-frame-canvas ${!selectedTemplate ? patternId : ""}`}
+            style={{
+              position: "relative",
+              backgroundColor: selectedTemplate ? "transparent" : activeFrameColor.bg,
+              color: activeFrameColor.id === "charcoal" || activeFrameColor.id === "choco" ? "#F7F1E3" : "#1C1917",
+              padding: selectedTemplate ? canvasPadding : "24px",
+              width: "100%",
+              maxWidth: "440px",
+              ...(selectedTemplate ? { aspectRatio: "2 / 3" } : { height: "auto" }),
+              borderRadius: "24px",
+              boxSizing: "border-box",
+              overflow: "hidden",
+            }}
           >
-            {isExporting ? "Memproses..." : "Selesai & Lanjut →"}
-          </button>
-        </header>
-
-        {/* Main Studio Container */}
-        <div className="edit-container">
-          {/* LEFT: LIVE CANVAS PREVIEW */}
-          <div className="preview-card">
-            <div className="preview-hud">
-              <span className="dot" /> LIVE PREVIEW
-            </div>
-
-            {swapSourceIndex !== null && (
-              <div className="swap-notice-banner">
-                Klik foto tujuan untuk menukar posisi
-              </div>
-            )}
-
-            {/* DYNAMIC FRAME WRAPPER */}
+            {/* LAYER 1: GRID FOTO */}
             <div
-              ref={previewRef}
-              className={`photo-strip-frame pattern-${patternId}`}
+              className={`grid-layout ${layoutMode}`}
               style={{
-                backgroundColor: activeFrameColor.bg,
-                color: activeFrameColor.text,
+                display: "grid",
+                gap: selectedTemplate ? "12px" : `${gridGap}px`,
+                width: "100%",
+                boxSizing: "border-box",
+                zIndex: 1,
+                ...gridStyle,
               }}
             >
-              {/* GRID LAYOUT CONTAINING PHOTOS */}
-              <div
-                className={`grid-layout ${layoutMode}`}
-                style={{ gap: `${gridGap}px` }}
-              >
-                {currentPhotos.slice(0, requiredSlots).map((item, idx) => {
-                  const isSwapSource = swapSourceIndex === idx;
-
-                  return (
-                    <div
-                      key={idx}
-                      className={`grid-item item-${idx + 1} ${
-                        isSwapSource ? "source-swap" : ""
-                      }`}
-                      style={{ borderRadius: `${borderRadius}px` }}
-                      onClick={() => handlePhotoClick(idx)}
-                    >
-                      <img
-                        src={item}
-                        alt={`Photo ${idx + 1}`}
-                        style={{ filter: getFilterStyle() }}
-                      />
-                      
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* WATERMARK BRANDING FOOTER */}
-              <div className="strip-footer">
-                <div className="footer-title">{customTitle || "PHOTO BOOTH"}</div>
-                <div className="footer-sub">{customSubtitle || "• 2026 •"}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: CUSTOMIZATION CONTROL PANEL */}
-          <div className="editor-panel">
-            <div className="panel-header">
-              <h3>Customization Studio</h3>
-              <button className="reset-btn" onClick={handleReset}>
-                🔄 Reset
-              </button>
-            </div>
-
-            {/* 1. LAYOUT SELECTION */}
-            <div className="control-section">
-              <label className="section-label">Pilih Layout Grid</label>
-              <div className="layout-picker-grid">
-                {LAYOUTS.map((l) => (
-                  <button
-                    key={l.id}
-                    className={`layout-btn ${
-                      layoutMode === l.id ? "active" : ""
-                    }`}
-                    onClick={() => setLayoutMode(l.id)}
-                  >
-                    <LayoutIcon id={l.id} />
-                    <span>{l.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. FRAME COLOR & PATTERN */}
-            <div className="control-section">
-              <label className="section-label">Warna & Pattern Frame</label>
-              <div className="color-picker-row">
-                {FRAME_COLORS.map((c) => (
-                  <button
-                    key={c.id}
-                    className={`color-dot ${
-                      frameColorId === c.id ? "active" : ""
-                    }`}
-                    style={{ backgroundColor: c.bg }}
-                    title={c.name}
-                    onClick={() => setFrameColorId(c.id)}
+              {visiblePhotos.map((src, idx) => (
+                <div
+                  key={`${src}-${idx}`}
+                  className="photo-item"
+                  style={{
+                    borderRadius: selectedTemplate ? "12px" : `${borderRadius}px`,
+                    aspectRatio: photoAspectRatios[src] || "4 / 3",
+                    width: "100%",
+                    overflow: "hidden",
+                    position: "relative",
+                  }}
+                >
+                  <img
+                    src={src}
+                    alt={`Photo ${idx + 1}`}
+                    onLoad={(event) => handlePhotoLoad(event, src)}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                      filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturate}%) ${getFilterValue(filter)}`,
+                    }}
                   />
-                ))}
-              </div>
+                </div>
+              ))}
 
-              <div className="pattern-row">
-                {FRAME_PATTERNS.map((p) => (
-                  <button
-                    key={p.id}
-                    className={`chip-btn ${patternId === p.id ? "active" : ""}`}
-                    onClick={() => setPatternId(p.id)}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
+              {/* Slot Kosong */}
+              {Array.from({ length: Math.max(0, maxPhotos - visiblePhotos.length) }).map((_, idx) => (
+                <div
+                  key={`placeholder-${idx}`}
+                  className="photo-item empty-slot"
+                  style={{
+                    borderRadius: selectedTemplate ? "12px" : `${borderRadius}px`,
+                    aspectRatio: "4 / 3",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(0,0,0,0.15)",
+                    color: selectedTemplate ? "#fff" : "#888",
+                    fontSize: "0.8rem",
+                    fontWeight: "bold",
+                    width: "100%",
+                  }}
+                >
+                  Slot {visiblePhotos.length + idx + 1}
+                </div>
+              ))}
             </div>
 
-            {/* 3. SPACING & RADIUS SLIDERS */}
-            <div className="control-section">
-              <label className="section-label">Jarak Grid & Sudut Frame</label>
-              <div className="slider-group">
-                <div className="slider-header">
-                  <span>Jarak Antar Foto (Gap)</span>
-                  <span>{gridGap}px</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="30"
-                  value={gridGap}
-                  onChange={(e) => setGridGap(Number(e.target.value))}
-                />
-              </div>
-
-              <div className="slider-group">
-                <div className="slider-header">
-                  <span>Lengkungan Sudut (Radius)</span>
-                  <span>{borderRadius}px</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="24"
-                  value={borderRadius}
-                  onChange={(e) => setBorderRadius(Number(e.target.value))}
-                />
-              </div>
-            </div>
-
-            {/* 4. PRESET FILTERS */}
-            <div className="control-section">
-              <label className="section-label">Filter Warna</label>
-              <div className="filter-grid">
-                {FILTERS.map((f) => (
-                  <button
-                    key={f.id}
-                    className={`chip-btn ${filter === f.id ? "active" : ""}`}
-                    onClick={() => setFilter(f.id)}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 5. IMAGE ADJUSTMENT SLIDERS */}
-            <div className="control-section">
-              <label className="section-label">Pengaturan Manual Foto</label>
-
-              <div className="slider-group">
-                <div className="slider-header">
-                  <span>Brightness (Kecerahan)</span>
-                  <span>{brightness}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="50"
-                  max="150"
-                  value={brightness}
-                  onChange={(e) => setBrightness(Number(e.target.value))}
-                />
-              </div>
-
-              <div className="slider-group">
-                <div className="slider-header">
-                  <span>Contrast (Kontras)</span>
-                  <span>{contrast}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="50"
-                  max="150"
-                  value={contrast}
-                  onChange={(e) => setContrast(Number(e.target.value))}
-                />
-              </div>
-
-              <div className="slider-group">
-                <div className="slider-header">
-                  <span>Saturation (Saturasi Warna)</span>
-                  <span>{saturate}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="200"
-                  value={saturate}
-                  onChange={(e) => setSaturate(Number(e.target.value))}
-                />
-              </div>
-            </div>
-
-            {/* 6. WATERMARK TEXT OVERLAYS */}
-            <div className="control-section">
-              <label className="section-label">Teks Watermark Frame</label>
-              <input
-                type="text"
-                className="input-text"
-                placeholder="Judul Utama"
-                value={customTitle}
-                onChange={(e) => setCustomTitle(e.target.value)}
+            {/* LAYER 2: OVERLAY TEMPLATE PNG */}
+            {selectedTemplate && selectedTemplate.overlay && (
+              <img
+                src={selectedTemplate.overlay}
+                alt="Template Overlay"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "fill",
+                  pointerEvents: "none",
+                  zIndex: 2,
+                }}
               />
-              <input
-                type="text"
-                className="input-text"
-                placeholder="Sub-Judul"
-                value={customSubtitle}
-                onChange={(e) => setCustomSubtitle(e.target.value)}
-              />
-            </div>
+            )}
 
-            {/* 7. UPLOAD LOCAL PHOTOS */}
-            <div className="control-section">
-              <label className="section-label">Tambah Foto dari Galeri</label>
-              <div className="file-upload-box">
-                <button className="upload-btn">📁 Unggah Foto Lokal</button>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
+            {/* WATERMARK TEKS */}
+            {!selectedTemplate && (
+              <div
+                className="frame-watermark"
+                style={{
+                  position: "relative",
+                  zIndex: 3,
+                  marginTop: "16px",
+                  textAlign: "center",
+                }}
+              >
+                <h3 className="wm-title" style={{ margin: 0, fontSize: "1.4rem", fontWeight: "bold" }}>
+                  {customTitle || "PHOTO BOOTH"}
+                </h3>
+                <p className="wm-subtitle" style={{ margin: "4px 0 0 0", fontSize: "0.85rem", letterSpacing: "2px" }}>
+                  {customSubtitle || "MEMORI KITA"}
+                </p>
               </div>
-            </div>
+            )}
           </div>
-        </div>
-      </div>
-    );
-  }
+        </section>
+
+        {/* SIDEBAR CONTROLS */}
+        <aside className="controls-sidebar">
+          <TemplateControl
+            templates={templates}
+            selectedTemplate={selectedTemplate}
+            onSelectTemplate={applyTemplate}
+          />
+          <UploadControl handleImageUpload={handleImageUpload} />
+          <LayoutControl layouts={layouts} layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
+          {!selectedTemplate && (
+            <FrameStyleControl
+              frameColors={frameColors}
+              frameColorId={frameColorId}
+              setFrameColorId={setFrameColorId}
+              framePatterns={framePatterns}
+              patternId={patternId}
+              setPatternId={setPatternId}
+              gridGap={gridGap}
+              setGridGap={setGridGap}
+              borderRadius={borderRadius}
+              setBorderRadius={setBorderRadius}
+            />
+          )}
+          <FilterControl
+            filters={filters}
+            filter={filter}
+            setFilter={setFilter}
+            brightness={brightness}
+            setBrightness={setBrightness}
+            contrast={contrast}
+            setContrast={setContrast}
+            saturate={saturate}
+            setSaturate={setSaturate}
+          />
+          {!selectedTemplate && (
+            <TextControl
+              customTitle={customTitle}
+              setCustomTitle={setCustomTitle}
+              customSubtitle={customSubtitle}
+              setCustomSubtitle={setCustomSubtitle}
+            />
+          )}
+        </aside>
+      </main>
+    </div>
+  );
+}
