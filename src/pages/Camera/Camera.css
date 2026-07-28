@@ -2,7 +2,7 @@
 
 /* ==========================================
    CAMERA PAGE STYLES (Camera.css)
-   Matching Welcome.css Warm Retro Theme
+   Warm Retro Theme + Circular Preview Slots
 ========================================== */
 
 /* 1. Root Base */
@@ -113,7 +113,7 @@
   z-index: 2;
 }
 
-/* Header */
+/* Header & Take Selector */
 .camera-header {
   display: flex;
   justify-content: space-between;
@@ -151,6 +151,44 @@
 .camera-header h2 span {
   color: var(--flame);
   text-shadow: 2px 2px 0 rgba(232, 67, 46, 0.25);
+}
+
+.take-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--paper);
+  font-family: 'Space Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.take-select {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--amber);
+  border: 1px solid rgba(255, 176, 32, 0.3);
+  padding: 6px 10px;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.take-select:hover:not(:disabled) {
+  background: rgba(255, 176, 32, 0.18);
+}
+
+.take-select option {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.take-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 6. Webcam Viewfinder Display */
@@ -270,54 +308,61 @@
   background-color: #22c55e;
 }
 
-/* 7. Preview Slots (Warm Retro Cards) */
+@keyframes pbw-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* 7. Bulat Sedang Preview Slots */
 .camera-preview-slots {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
   width: 100%;
+  padding: 4px 0;
 }
 
 .photo-slot-tile {
   position: relative;
-  aspect-ratio: 4 / 3;
-  background: var(--paper);
-  border: 1px solid rgba(28, 25, 23, 0.1);
-  border-radius: 10px;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%; /* Membuat slot berbentuk bulat */
+  background: rgba(247, 241, 227, 0.08);
+  border: 2px dashed rgba(247, 241, 227, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
-  transition: transform 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.25 ease;
+  box-sizing: border-box;
 }
 
-.photo-slot-tile:nth-child(1) { transform: rotate(-1deg); }
-.photo-slot-tile:nth-child(2) { transform: rotate(1.2deg); }
-.photo-slot-tile:nth-child(3) { transform: rotate(-0.8deg); }
-.photo-slot-tile:nth-child(4) { transform: rotate(1deg); }
+/* Style ketika foto sudah terisi */
+.photo-slot-tile.has-photo {
+  border: 2px solid var(--amber);
+  background: var(--paper);
+  box-shadow: 0 6px 16px rgba(255, 176, 32, 0.3);
+  transform: scale(1.02);
+}
 
+/* Sembunyikan aksen plester tape kotak lama */
 .photo-slot-tape {
-  position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 26px;
-  height: 10px;
-  background: rgba(255, 176, 32, 0.7);
-  border: 1px solid rgba(255, 176, 32, 0.4);
-  z-index: 5;
+  display: none;
 }
 
 .photo-slot-tile img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 50%;
 }
 
 .slot-number {
   font-family: 'Space Mono', monospace;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--muted);
   opacity: 0.6;
@@ -418,10 +463,12 @@
     display: none;
   }
 
-  .photo-slot-tile:nth-child(1),
-  .photo-slot-tile:nth-child(2),
-  .photo-slot-tile:nth-child(3),
-  .photo-slot-tile:nth-child(4) {
-    transform: rotate(0deg);
+  .photo-slot-tile {
+    width: 48px;
+    height: 48px;
+  }
+
+  .slot-number {
+    font-size: 10px;
   }
 }

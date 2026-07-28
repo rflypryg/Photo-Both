@@ -89,7 +89,7 @@ function Welcome({ onStart }) {
             <div className="pbw-feature-tape" />
             <div className="pbw-feature-icon">03</div>
             <h4>Cetak & Digital</h4>
-            <p>Dapatkan hasil cetak fisik dan unduh file via QR Code.</p>
+            <p>Dapatkan hasil unduh file via QR Code.</p>
           </div>
         </div>
       </div>

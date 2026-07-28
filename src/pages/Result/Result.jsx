@@ -113,7 +113,6 @@ function Result({ photo, back, home }) {
           </div>
 
           <div className="photo-container">
-            <div className="photo-tape" />
             <img
               src={photo}
               alt="Hasil Photo Booth"
@@ -129,17 +128,19 @@ function Result({ photo, back, home }) {
             <span className="btn-icon">⬇</span> Unduh Foto
           </button>
 
-          <button className="share-btn" onClick={sharePhoto}>
-            <span className="btn-icon">📲</span>{" "}
-            {copied ? "Link Disalin!" : "Bagikan"}
-          </button>
+          <div className="button-row">
+            <button className="share-btn" onClick={sharePhoto}>
+              <span className="btn-icon">📲</span>{" "}
+              {copied ? "Link Disalin!" : "Bagikan"}
+            </button>
 
-          <button className="retake-btn" onClick={back}>
-            <span className="btn-icon">📸</span> Edit Ulang
-          </button>
+            <button className="retake-btn" onClick={back}>
+              <span className="btn-icon">📸</span> Edit Ulang
+            </button>
+          </div>
 
           <button className="home-btn" onClick={home}>
-            <span className="btn-icon">🏠</span> Beranda
+            🏠 Kembali ke Beranda
           </button>
         </div>
       </div>

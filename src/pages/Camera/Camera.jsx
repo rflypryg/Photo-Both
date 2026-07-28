@@ -24,9 +24,13 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
   const animationFrameRef = useRef(null);
   const isCapturing = useRef(false);
 
+  // Dynamic max photos state (Default 4, opsi: 4, 6, 8, 9)
+  const [maxPhotos, setMaxPhotos] = useState(4);
+
   const [isBlurring, setIsBlurring] = useState(false);
   const [flash, setFlash] = useState(false);
   const [photos, setPhotos] = useState([]);
+  const [isCooldown, setIsCooldown] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -68,11 +72,13 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
   }, []);
 
   const detectHands = () => {
+    // Mencegah deteksi berulang jika sedang mengambil foto, cooldown, atau foto sudah penuh
     if (
       !webcamRef.current ||
       !handLandmarkerRef.current ||
       isCapturing.current ||
-      photos.length >= 4
+      isCooldown ||
+      photos.length >= maxPhotos
     ) {
       animationFrameRef.current = requestAnimationFrame(detectHands);
       return;
@@ -106,15 +112,16 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
   };
 
   const captureSingle = async () => {
-    if (isBlurring || isCapturing.current || photos.length >= 4) return;
+    if (isBlurring || isCapturing.current || isCooldown || photos.length >= maxPhotos) return;
 
+    // Kunci flag agar tidak kepicu berulang kali dari loop requestAnimationFrame
     isCapturing.current = true;
 
-    // Countdown Blur 3 Detik
+    // 1. Efek Blur berjalan selama 1 detik (1000ms)
     setIsBlurring(true);
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Flash & Ambil Gambar
+    // 2. Hilangkan blur lalu jalankan Flash & Ambil Gambar
     setIsBlurring(false);
     setFlash(true);
 
@@ -128,11 +135,24 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
     await new Promise((resolve) => setTimeout(resolve, 200));
     setFlash(false);
 
-    isCapturing.current = false;
+    // 3. Beri jeda cooldown (1 detik) sebelum gestur berikutnya bisa terdeteksi lagi
+    setIsCooldown(true);
+    setTimeout(() => {
+      isCapturing.current = false;
+      setIsCooldown(false);
+    }, 1000);
   };
 
   const handleRetakeLast = () => {
     setPhotos((prev) => prev.slice(0, -1));
+  };
+
+  const handleMaxPhotosChange = (e) => {
+    const newMax = parseInt(e.target.value, 10);
+    setMaxPhotos(newMax);
+    if (photos.length > newMax) {
+      setPhotos((prev) => prev.slice(0, newMax));
+    }
   };
 
   const handleConfirm = () => {
@@ -168,7 +188,23 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
           <h2>
             PHOTO <span>BOOTH</span>
           </h2>
-          <div style={{ width: "95px" }}></div>
+          
+          {/* Selector Pilihan Jumlah Take */}
+          <div className="take-selector-container">
+            <label htmlFor="take-select">TAKE:</label>
+            <select
+              id="take-select"
+              className="take-select"
+              value={maxPhotos}
+              onChange={handleMaxPhotosChange}
+              disabled={photos.length > 0 || isCapturing.current}
+            >
+              <option value={4}>4 Foto</option>
+              <option value={6}>6 Foto</option>
+              <option value={8}>8 Foto</option>
+              <option value={9}>9 Foto</option>
+            </select>
+          </div>
         </header>
 
         {/* Display Webcam Viewfinder */}
@@ -204,28 +240,30 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
           {/* Status HUD Overlay */}
           <div className="camera-info-bar">
             <div className="take-badge-inline">
-              {photos.length < 4
-                ? `TAKE ${photos.length + 1} / 4`
-                : "SELESAI (4/4)"}
+              {photos.length < maxPhotos
+                ? `TAKE ${photos.length + 1} / ${maxPhotos}`
+                : `SELESAI (${maxPhotos}/${maxPhotos})`}
             </div>
             <div className="camera-status-inline">
               <span
                 className={`status-dot ${
-                  photos.length >= 4 ? "done" : "online"
+                  photos.length >= maxPhotos ? "done" : "online"
                 }`}
               ></span>
-              {photos.length >= 4
-                ? "SELESAI! KLIK LANJUT"
+              {photos.length >= maxPhotos
+                ? "SELESAI! KLIK LANJUT ATAU RETAKE"
                 : isBlurring
                 ? "SENYUM! 📸"
+                : isCooldown
+                ? "TUNGGU SEBENTAR... ⏳"
                 : "POSE PEACE ✌️"}
             </div>
           </div>
         </div>
 
-        {/* Slot Grid Preview Foto (Tampilan ala Polaroid Tape) */}
+        {/* Slot Grid Preview Foto */}
         <div className="camera-preview-slots">
-          {[0, 1, 2, 3].map((index) => (
+          {Array.from({ length: maxPhotos }).map((_, index) => (
             <div
               key={index}
               className={`photo-slot-tile ${photos[index] ? "has-photo" : ""}`}
@@ -234,7 +272,9 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
               {photos[index] ? (
                 <img src={photos[index]} alt={`Take ${index + 1}`} />
               ) : (
-                <span className="slot-number">0{index + 1}</span>
+                <span className="slot-number">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
               )}
             </div>
           ))}
@@ -242,11 +282,11 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
 
         {/* Panel Kontrol Shutter & Retake */}
         <div className="camera-controls">
-          {photos.length > 0 && photos.length < 4 && (
+          {photos.length > 0 && (
             <button
               className="retake-btn-icon"
               onClick={handleRetakeLast}
-              disabled={isBlurring}
+              disabled={isBlurring || isCapturing.current}
               title={`Hapus Foto Ke-${photos.length}`}
             >
               ↩
@@ -254,14 +294,18 @@ function Camera({ onCaptureComplete, setPhoto, next, back }) {
           )}
 
           <button
-            className={`capture-btn ${isCapturing.current ? "loading" : ""}`}
+            className={`capture-btn ${
+              isCapturing.current || isCooldown ? "loading" : ""
+            }`}
             onClick={captureSingle}
-            disabled={isCapturing.current || photos.length >= 4}
+            disabled={
+              isCapturing.current || isCooldown || photos.length >= maxPhotos
+            }
           >
             <div className="capture-btn-inner"></div>
           </button>
 
-          {photos.length === 4 && (
+          {photos.length === maxPhotos && (
             <button className="confirm-btn-compact" onClick={handleConfirm}>
               LANJUT ➔
             </button>
